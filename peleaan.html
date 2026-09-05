@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Brick Fighter: Alex vs Nicol - Arcade Edition</title>
+  <style>
+    * { box-sizing: border-box; user-select: none; }
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Courier New', monospace;
+      color: #0f380f;
+    }
+    .console {
+      background: #d42222;
+      padding: 18px;
+      border-radius: 20px 20px 40px 20px;
+      box-shadow: inset 0 -5px 10px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.8);
+      width: 380px;
+      text-align: center;
+    }
+    .lcd-screen {
+      background: #9bbc0f;
+      border: 4px solid #8bac0f;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: inset 3px 3px 6px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      font-size: 11px;
+      margin-bottom: 4px;
+      border-bottom: 2px solid #0f380f;
+      padding-bottom: 2px;
+    }
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+    .hp-bar {
+      border: 2px solid #0f380f;
+      width: 110px;
+      height: 12px;
+      background: #8bac0f;
+    }
+    .hp-fill {
+      height: 100%;
+      background: #0f380f;
+      width: 100%;
+      transition: width 0.1s ease-out;
+    }
+    .stage {
+      display: grid;
+      grid-template-columns: repeat(18, 1fr);
+      grid-template-rows: repeat(10, 15px);
+      gap: 1px;
+      background: #8bac0f;
+      border: 2px solid #0f380f;
+      margin: 8px 0;
+    }
+    .pixel {
+      width: 100%;
+      height: 100%;
+      background: #8bac0f;
+    }
+    .pixel.on {
+      background: #0f380f;
+      box-shadow: inset 0 0 1px #306230;
+    }
+    .log-box {
+      font-size: 11px;
+      font-weight: bold;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* Controles Táctiles y de Teclado */
+    .mobile-controls {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      gap: 10px;
+    }
+    .p-box {
+      background: #222;
+      color: #fff;
+      padding: 8px;
+      border-radius: 8px;
+      flex: 1;
+    }
+    .p-title {
+      font-size: 10px;
+      color: #9bbc0f;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+    }
+    .btn-action {
+      background: #444;
+      color: #fff;
+      border: none;
+      padding: 8px 0;
+      flex: 1;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 11px;
+      cursor: pointer;
+      box-shadow: 0 3px #000;
+    }
+    .btn-action:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px #000;
+      background: #666;
+    }
+    .btn-reset {
+      margin-top: 10px;
+      background: #ffcc00;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      font-weight: bold;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px #997700;
+      display: none;
+      width: 100%;
+    }
+    .btn-reset:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px #997700;
+    }
+  </style>
+</head>
+<body>
+
+<div class="console">
+  <div class="lcd-screen">
+    <div class="top-bar">
+      <span id="level-txt">NIVEL: 1/3</span>
+      <span id="round-txt">ROUND 1</span>
+    </div>
+
+    <div class="hud">
+      <div>ALEX <div class="hp-bar"><div id="hp-alex" class="hp-fill"></div></div></div>
+      <div>NICOL <div class="hp-bar"><div id="hp-nicol" class="hp-fill"></div></div></div>
+    </div>
+
+    <div class="stage" id="stage"></div>
+
+    <div class="log-box" id="log">¡PELEA! (A/S/D vs J/K/L)</div>
+  </div>
+
+  <!-- Botón de Reinicio / Siguiente Nivel -->
+  <button id="btn-reset" class="btn-reset" onclick="siguienteNivelOReiniciar()">SIGUIENTE NIVEL</button>
+
+  <!-- Botones en Pantalla para Touch / APK -->
+  <div class="mobile-controls">
+    <div class="p-box">
+      <div class="p-title">ALEX (P1)</div>
+      <div class="btn-group">
+        <button class="btn-action" onclick="atacar('ALEX', 'PUNCH')">A</button>
+        <button class="btn-action" onclick="atacar('ALEX', 'KICK')">S</button>
+        <button class="btn-action" onclick="atacar('ALEX', 'THROW')">D</button>
+      </div>
+    </div>
+    <div class="p-box">
+      <div class="p-title">NICOL (P2)</div>
+      <div class="btn-group">
+        <button class="btn-action" onclick="atacar('NICOL', 'PUNCH')">J</button>
+        <button class="btn-action" onclick="atacar('NICOL', 'KICK')">K</button>
+        <button class="btn-action" onclick="atacar('NICOL', 'THROW')">L</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Sonidos Sintetizados (Retro Beeps)
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function playSound(freq, duration, type = 'square') {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  }
+
+  const stage = document.getElementById('stage');
+  const log = document.getElementById('log');
+  const btnReset = document.getElementById('btn-reset');
+  const pixels = [];
+
+  const COLS = 18;
+  const ROWS = 10;
+
+  for (let i = 0; i < COLS * ROWS; i++) {
+    const p = document.createElement('div');
+    p.classList.add('pixel');
+    stage.appendChild(p);
+    pixels.push(p);
+  }
+
+  function clearStage() {
+    pixels.forEach(p => p.classList.remove('on'));
+  }
+
+  function drawPixel(x, y) {
+    if (x >= 0 && x < COLS && y >= 0 && y < ROWS) {
+      pixels[y * COLS + x].classList.add('on');
+    }
+  }
+
+  // Estado del Juego y Niveles
+  let currentLevel = 1;
+  const maxLevels = 3;
+  let maxHp = 100;
+
+  let alex = { hp: 100, state: 'IDLE' };
+  let nicol = { hp: 100, state: 'IDLE' };
+  let proyectiles = [];
+  let gameOver = false;
+
+  // Poses Base (Incluye Animación KO)
+  const POSES = {
+    ALEX: {
+      IDLE: [[2,5], [2,6], [1,6], [3,6], [2,7], [1,8], [3,8]],
+      PUNCH: [[2,5], [2,6], [1,6], [3,6], [4,6], [5,6], [2,7], [1,8], [3,8]],
+      KICK: [[2,5], [2,6], [1,6], [3,6], [4,5], [5,4], [2,7], [1,8]],
+      THROW: [[2,5], [2,6], [1,6], [3,6], [4,6], [2,7], [1,8], [3,8]],
+      HIT: [[1,5], [1,6], [0,6], [2,6], [1,7], [0,8], [2,8]],
+      KO: [[0,8], [1,8], [2,8], [3,8], [4,8], [1,7]] // Tendido en el piso
+    },
+    NICOL: {
+      IDLE: [[15,5], [15,6], [14,6], [16,6], [15,7], [14,8], [16,8]],
+      PUNCH: [[15,5], [15,6], [14,6], [13,6], [12,6], [16,6], [15,7], [14,8], [16,8]],
+      KICK: [[15,5], [15,6], [14,6], [16,6], [13,5], [12,4], [15,7], [16,8]],
+      THROW: [[15,5], [15,6], [14,6], [13,6], [16,6], [15,7], [14,8], [16,8]],
+      HIT: [[16,5], [16,6], [15,6], [17,6], [16,7], [15,8], [17,8]],
+      KO: [[13,8], [14,8], [15,8], [16,8], [17,8], [16,7]] // Tendida en el piso
+    }
+  };
+
+  function render() {
+    clearStage();
+
+    // Suelo
+    for (let x = 0; x < COLS; x++) drawPixel(x, 9);
+
+    // Renderizado de personajes
+    const spriteA = POSES.ALEX[alex.state] || POSES.ALEX.IDLE;
+    const spriteN = POSES.NICOL[nicol.state] || POSES.NICOL.IDLE;
+
+    spriteA.forEach(([x, y]) => drawPixel(x, y));
+    spriteN.forEach(([x, y]) => drawPixel(x, y));
+
+    // Proyectiles
+    proyectiles.forEach(p => drawPixel(p.x, p.y));
+  }
+
+  function updateHUD() {
+    const pctA = Math.max(0, (alex.hp / maxHp) * 100);
+    const pctN = Math.max(0, (nicol.hp / maxHp) * 100);
+    
+    document.getElementById('hp-alex').style.width = pctA + '%';
+    document.getElementById('hp-nicol').style.width = pctN + '%';
+
+    if (!gameOver && (alex.hp <= 0 || nicol.hp <= 0)) {
+      gameOver = true;
+      playSound(150, 0.6, 'sawtooth'); // Sonido KO
+
+      if (alex.hp <= 0) {
+        alex.state = 'KO';
+        log.innerText = "¡K.O.! NICOL GANA";
+      } else {
+        nicol.state = 'KO';
+        log.innerText = "¡K.O.! ALEX GANA";
+      }
+
+      btnReset.style.display = 'block';
+      if (currentLevel < maxLevels) {
+        btnReset.innerText = "PASAR AL NIVEL " + (currentLevel + 1);
+      } else {
+        btnReset.innerText = "REINICIAR JUEGO COMPLETO";
+      }
+    }
+  }
+
+  function atacar(jugador, tipo) {
+    if (gameOver) return;
+
+    if (jugador === 'ALEX' && alex.state === 'IDLE') {
+      if (tipo === 'PUNCH') {
+        alex.state = 'PUNCH';
+        nicol.hp -= 10;
+        nicol.state = 'HIT';
+        playSound(400, 0.1);
+        log.innerText = "¡Alex asesta Puño!";
+      } else if (tipo === 'KICK') {
+        alex.state = 'KICK';
+        nicol.hp -= 15;
+        nicol.state = 'HIT';
+        playSound(500, 0.12);
+        log.innerText = "¡Alex lanzó Patada!";
+      } else if (tipo === 'THROW') {
+        alex.state = 'THROW';
+        proyectiles.push({ x: 5, y: 6, dir: 1 });
+        playSound(600, 0.08);
+        log.innerText = "¡Alex lanzó Objeto!";
+      }
+      resetState('ALEX', 200);
+    }
+
+    if (jugador === 'NICOL' && nicol.state === 'IDLE') {
+      if (tipo === 'PUNCH') {
+        nicol.state = 'PUNCH';
+        alex.hp -= 10;
+        alex.state = 'HIT';
+        playSound(450, 0.1);
+        log.innerText = "¡Nicol asesta Puño!";
+      } else if (tipo === 'KICK') {
+        nicol.state = 'KICK';
+        alex.hp -= 15;
+        alex.state = 'HIT';
+        playSound(550, 0.12);
+        log.innerText = "¡Nicol lanzó Patada!";
+      } else if (tipo === 'THROW') {
+        nicol.state = 'THROW';
+        proyectiles.push({ x: 12, y: 6, dir: -1 });
+        playSound(650, 0.08);
+        log.innerText = "¡Nicol lanzó Objeto!";
+      }
+      resetState('NICOL', 200);
+    }
+
+    updateHUD();
+    render();
+  }
+
+  // Bucle de física de objetos arrojados
+  setInterval(() => {
+    if (gameOver) return;
+
+    proyectiles.forEach((p, index) => {
+      p.x += p.dir;
+
+      if (p.dir === 1 && p.x >= 14) {
+        nicol.hp -= 18;
+        nicol.state = 'HIT';
+        playSound(200, 0.15);
+        log.innerText = "¡Impacto a Nicol!";
+        proyectiles.splice(index, 1);
+        setTimeout(() => { if (!gameOver) nicol.state = 'IDLE'; render(); }, 150);
+      } else if (p.dir === -1 && p.x <= 3) {
+        alex.hp -= 18;
+        alex.state = 'HIT';
+        playSound(200, 0.15);
+        log.innerText = "¡Impacto a Alex!";
+        proyectiles.splice(index, 1);
+        setTimeout(() => { if (!gameOver) alex.state = 'IDLE'; render(); }, 150);
+      } else if (p.x < 0 || p.x >= COLS) {
+        proyectiles.splice(index, 1);
+      }
+    });
+
+    updateHUD();
+    render();
+  }, 70 - (currentLevel * 10)); // Más rápido en niveles superiores
+
+  function resetState(player, ms) {
+    setTimeout(() => {
+      if (!gameOver) {
+        if (player === 'ALEX') alex.state = 'IDLE';
+        if (player === 'NICOL') nicol.state = 'IDLE';
+        render();
+      }
+    }, ms);
+  }
+
+  // Teclado
+  window.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+    if (key === 'a') atacar('ALEX', 'PUNCH');
+    if (key === 's') atacar('ALEX', 'KICK');
+    if (key === 'd') atacar('ALEX', 'THROW');
+
+    if (key === 'j') atacar('NICOL', 'PUNCH');
+    if (key === 'k') atacar('NICOL', 'KICK');
+    if (key === 'l') atacar('NICOL', 'THROW');
+  });
+
+  function siguienteNivelOReiniciar() {
+    if (currentLevel < maxLevels) {
+      currentLevel++;
+      maxHp += 50; // Más vida por nivel
+    } else {
+      currentLevel = 1;
+      maxHp = 100;
+    }
+
+    alex.hp = maxHp;
+    nicol.hp = maxHp;
+    alex.state = 'IDLE';
+    nicol.state = 'IDLE';
+    proyectiles = [];
+    gameOver = false;
+
+    document.getElementById('level-txt').innerText = `NIVEL: ${currentLevel}/${maxLevels}`;
+    document.getElementById('round-txt').innerText = `ROUND ${currentLevel}`;
+    log.innerText = `¡NIVEL ${currentLevel} INICIADO!`;
+    btnReset.style.display = 'none';
+
+    updateHUD();
+    render();
+  }
+
+  render();
+</script>
+
+</body>
+</html>

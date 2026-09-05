@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Car Soccer Bumper: Alex vs Nicol</title>
+  <style>
+    * { box-sizing: border-box; user-select: none; }
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Courier New', monospace;
+      color: #0f380f;
+    }
+    .console {
+      background: #d42222;
+      padding: 16px;
+      border-radius: 20px 20px 40px 20px;
+      box-shadow: inset 0 -5px 10px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.8);
+      width: 400px;
+      text-align: center;
+    }
+    .lcd-screen {
+      background: #9bbc0f;
+      border: 4px solid #8bac0f;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: inset 3px 3px 6px rgba(0,0,0,0.3);
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      font-size: 11px;
+      margin-bottom: 4px;
+      border-bottom: 2px solid #0f380f;
+      padding-bottom: 2px;
+    }
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+    .score {
+      font-size: 18px;
+      background: #0f380f;
+      color: #9bbc0f;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .stage {
+      display: grid;
+      grid-template-columns: repeat(20, 1fr);
+      grid-template-rows: repeat(10, 15px);
+      gap: 1px;
+      background: #8bac0f;
+      border: 2px solid #0f380f;
+      margin: 6px 0;
+    }
+    .pixel {
+      width: 100%;
+      height: 100%;
+      background: #8bac0f;
+    }
+    .pixel.on {
+      background: #0f380f;
+      box-shadow: inset 0 0 1px #306230;
+    }
+    .pixel.goal {
+      background: #306230;
+    }
+    .log-box {
+      font-size: 11px;
+      font-weight: bold;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* Controles Táctiles / APK */
+    .mobile-controls {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      gap: 8px;
+    }
+    .p-box {
+      background: #222;
+      color: #fff;
+      padding: 6px;
+      border-radius: 8px;
+      flex: 1;
+    }
+    .p-title {
+      font-size: 10px;
+      color: #9bbc0f;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .btn-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+    }
+    .btn-action {
+      background: #444;
+      color: #fff;
+      border: none;
+      padding: 6px 0;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .btn-action:active {
+      background: #666;
+    }
+    .btn-reset {
+      margin-top: 8px;
+      background: #ffcc00;
+      color: #000;
+      border: none;
+      padding: 8px 16px;
+      font-weight: bold;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px #997700;
+      display: none;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<div class="console">
+  <div class="lcd-screen">
+    <div class="top-bar">
+      <span id="level-txt">NIVEL 1: ESTÁNDAR</span>
+      <span>PRIMERO A 3 GOLES</span>
+    </div>
+
+    <div class="hud">
+      <div>ALEX <span id="score-alex" class="score">0</span></div>
+      <div><span id="score-nicol" class="score">0</span> NICOL</div>
+    </div>
+
+    <div class="stage" id="stage"></div>
+
+    <div class="log-box" id="log">¡MUEVE TU CARRO Y METE GOL!</div>
+  </div>
+
+  <button id="btn-reset" class="btn-reset" onclick="siguienteNivelOReiniciar()">PASAR AL NIVEL 2</button>
+
+  <div class="mobile-controls">
+    <div class="p-box">
+      <div class="p-title">ALEX (W/A/S/D)</div>
+      <div class="btn-grid">
+        <div></div>
+        <button class="btn-action" onclick="mover('ALEX', 0, -1)">W</button>
+        <div></div>
+        <button class="btn-action" onclick="mover('ALEX', -1, 0)">A</button>
+        <button class="btn-action" onclick="mover('ALEX', 0, 1)">S</button>
+        <button class="btn-action" onclick="mover('ALEX', 1, 0)">D</button>
+      </div>
+    </div>
+    <div class="p-box">
+      <div class="p-title">NICOL (I/J/K/L)</div>
+      <div class="btn-grid">
+        <div></div>
+        <button class="btn-action" onclick="mover('NICOL', 0, -1)">I</button>
+        <div></div>
+        <button class="btn-action" onclick="mover('NICOL', -1, 0)">J</button>
+        <button class="btn-action" onclick="mover('NICOL', 0, 1)">K</button>
+        <button class="btn-action" onclick="mover('NICOL', 1, 0)">L</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Audio Retro Sintetizado
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function playSound(freq, duration, type = 'square') {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  }
+
+  const COLS = 20;
+  const ROWS = 10;
+  const stage = document.getElementById('stage');
+  const log = document.getElementById('log');
+  const btnReset = document.getElementById('btn-reset');
+  const pixels = [];
+
+  for (let i = 0; i < COLS * ROWS; i++) {
+    const p = document.createElement('div');
+    p.classList.add('pixel');
+    stage.appendChild(p);
+    pixels.push(p);
+  }
+
+  function clearStage() {
+    pixels.forEach(p => p.className = 'pixel');
+  }
+
+  function drawPixel(x, y, className = 'on') {
+    if (x >= 0 && x < COLS && y >= 0 && y < ROWS) {
+      pixels[y * COLS + x].classList.add(className);
+    }
+  }
+
+  // Estado del juego
+  let level = 1;
+  const maxLevels = 3;
+  let scoreAlex = 0;
+  let scoreNicol = 0;
+  let gameOver = false;
+
+  // Carros y Pelota
+  let alex = { x: 3, y: 4, vx: 0, vy: 0 };
+  let nicol = { x: 16, y: 4, vx: 0, vy: 0 };
+  let ball = { x: 10, y: 4, vx: 0, vy: 0 };
+
+  const NOMBRES_NIVELES = {
+    1: "NIVEL 1: ESTÁNDAR",
+    2: "NIVEL 2: PISTA DE HIELO",
+    3: "NIVEL 3: TURBO NEÓN"
+  };
+
+  function resetPositions() {
+    alex.x = 3; alex.y = 4; alex.vx = 0; alex.vy = 0;
+    nicol.x = 16; nicol.y = 4; nicol.vx = 0; nicol.vy = 0;
+    ball.x = 10; ball.y = 4; ball.vx = 0; ball.vy = 0;
+  }
+
+  function render() {
+    clearStage();
+
+    // Dibujar Porterías (Lado Izquierdo = Alex, Lado Derecho = Nicol)
+    for (let y = 3; y <= 6; y++) {
+      drawPixel(0, y, 'goal');
+      drawPixel(COLS - 1, y, 'goal');
+    }
+
+    // Dibujar Carro ALEX (2x2 píxeles)
+    drawPixel(alex.x, alex.y);
+    drawPixel(alex.x + 1, alex.y);
+    drawPixel(alex.x, alex.y + 1);
+    drawPixel(alex.x + 1, alex.y + 1);
+
+    // Dibujar Carro NICOL (2x2 píxeles)
+    drawPixel(nicol.x, nicol.y);
+    drawPixel(nicol.x + 1, nicol.y);
+    drawPixel(nicol.x, nicol.y + 1);
+    drawPixel(nicol.x + 1, nicol.y + 1);
+
+    // Dibujar Pelota (1 píxel)
+    drawPixel(Math.round(ball.x), Math.round(ball.y));
+  }
+
+  function mover(jugador, dx, dy) {
+    if (gameOver) return;
+    playSound(300, 0.05);
+
+    let potencia = level === 3 ? 1.5 : 1; // Más velocidad en Nivel 3
+
+    if (jugador === 'ALEX') {
+      alex.vx += dx * potencia;
+      alex.vy += dy * potencia;
+    } else {
+      nicol.vx += dx * potencia;
+      nicol.vy += dy * potencia;
+    }
+  }
+
+  // Bucle de Física del Juego
+  setInterval(() => {
+    if (gameOver) return;
+
+    // Fricción según el Nivel
+    let friccion = level === 2 ? 0.96 : 0.82; // En Nivel 2 resbala más
+
+    // Actualizar Alex
+    alex.x += alex.vx;
+    alex.y += alex.vy;
+    alex.vx *= friccion;
+    alex.vy *= friccion;
+    alex.x = Math.max(1, Math.min(COLS - 3, alex.x));
+    alex.y = Math.max(0, Math.min(ROWS - 2, alex.y));
+
+    // Actualizar Nicol
+    nicol.x += nicol.vx;
+    nicol.y += nicol.vy;
+    nicol.vx *= friccion;
+    nicol.vy *= friccion;
+    nicol.x = Math.max(1, Math.min(COLS - 3, nicol.x));
+    nicol.y = Math.max(0, Math.min(ROWS - 2, nicol.y));
+
+    // Actualizar Pelota
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+    ball.vx *= friccion;
+    ball.vy *= friccion;
+
+    // Colisión de la pelota con pared superior/inferior
+    if (ball.y <= 0 || ball.y >= ROWS - 1) {
+      ball.vy *= -1;
+      ball.y = Math.max(0, Math.min(ROWS - 1, ball.y));
+      playSound(200, 0.05);
+    }
+
+    // Colisión Carro Alex con Pelota
+    if (Math.abs(alex.x - ball.x) < 2 && Math.abs(alex.y - ball.y) < 2) {
+      ball.vx = alex.vx * 1.5 + 1;
+      ball.vy = alex.vy * 1.5;
+      playSound(500, 0.08);
+    }
+
+    // Colisión Carro Nicol con Pelota
+    if (Math.abs(nicol.x - ball.x) < 2 && Math.abs(nicol.y - ball.y) < 2) {
+      ball.vx = nicol.vx * 1.5 - 1;
+      ball.vy = nicol.vy * 1.5;
+      playSound(550, 0.08);
+    }
+
+    // Detector de Gol en Porterías
+    if (ball.x <= 0) {
+      if (ball.y >= 3 && ball.y <= 6) {
+        scoreNicol++;
+        golAnotado("¡GOL DE NICOL!");
+      } else {
+        ball.vx *= -1;
+        ball.x = 1;
+      }
+    } else if (ball.x >= COLS - 1) {
+      if (ball.y >= 3 && ball.y <= 6) {
+        scoreAlex++;
+        golAnotado("¡GOL DE ALEX!");
+      } else {
+        ball.vx *= -1;
+        ball.x = COLS - 2;
+      }
+    }
+
+    render();
+  }, 70);
+
+  function golAnotado(txt) {
+    playSound(800, 0.4, 'sawtooth');
+    log.innerText = txt;
+    document.getElementById('score-alex').innerText = scoreAlex;
+    document.getElementById('score-nicol').innerText = scoreNicol;
+
+    if (scoreAlex >= 3 || scoreNicol >= 3) {
+      gameOver = true;
+      let ganador = scoreAlex >= 3 ? "ALEX" : "NICOL";
+      log.innerText = `¡${ganador} GANA EL ${NOMBRES_NIVELES[level]}!`;
+      btnReset.style.display = 'block';
+
+      if (level < maxLevels) {
+        btnReset.innerText = "PASAR AL NIVEL " + (level + 1);
+      } else {
+        btnReset.innerText = "REINICIAR CAMPEONATO";
+      }
+    } else {
+      resetPositions();
+    }
+  }
+
+  // Teclado
+  window.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    // Alex
+    if (k === 'w') mover('ALEX', 0, -1);
+    if (k === 's') mover('ALEX', 0, 1);
+    if (k === 'a') mover('ALEX', -1, 0);
+    if (k === 'd') mover('ALEX', 1, 0);
+
+    // Nicol
+    if (k === 'i') mover('NICOL', 0, -1);
+    if (k === 'k') mover('NICOL', 0, 1);
+    if (k === 'j') mover('NICOL', -1, 0);
+    if (k === 'l') mover('NICOL', 1, 0);
+  });
+
+  function siguienteNivelOReiniciar() {
+    if (level < maxLevels) {
+      level++;
+    } else {
+      level = 1;
+    }
+
+    scoreAlex = 0;
+    scoreNicol = 0;
+    gameOver = false;
+    document.getElementById('score-alex').innerText = "0";
+    document.getElementById('score-nicol').innerText = "0";
+    document.getElementById('level-txt').innerText = NOMBRES_NIVELES[level];
+    log.innerText = "¡NUEVA PARTIDA!";
+    btnReset.style.display = 'none';
+
+    resetPositions();
+    render();
+  }
+
+  resetPositions();
+  render();
+</script>
+
+</body>
+</html>

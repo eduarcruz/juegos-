@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Brick Fighter: Alex vs Nicol</title>
+  <style>
+    * { box-sizing: border-box; user-select: none; }
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Courier New', monospace;
+    }
+    /* Carcasa de Consola Retro */
+    .console {
+      background: #d42222;
+      padding: 20px;
+      border-radius: 20px 20px 50px 20px;
+      box-shadow: inset 0 -5px 10px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.8);
+      width: 320px;
+      text-align: center;
+    }
+    /* Pantalla LCD Verde */
+    .lcd-screen {
+      background: #9bbc0f;
+      border: 4px solid #8bac0f;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: inset 3px 3px 6px rgba(0,0,0,0.3);
+      color: #0f380f;
+    }
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    .hp-bar {
+      border: 2px solid #0f380f;
+      width: 100px;
+      height: 12px;
+      background: #8bac0f;
+    }
+    .hp-fill {
+      height: 100%;
+      background: #0f380f;
+      width: 100%;
+    }
+    /* Grid de Píxeles */
+    .stage {
+      display: grid;
+      grid-template-columns: repeat(16, 1fr);
+      grid-template-rows: repeat(10, 15px);
+      gap: 1px;
+      background: #8bac0f;
+      border: 2px solid #0f380f;
+      margin: 10px 0;
+    }
+    .pixel {
+      width: 100%;
+      height: 100%;
+      background: #8bac0f;
+    }
+    .pixel.on {
+      background: #0f380f;
+      box-shadow: inset 0 0 1px #306230;
+    }
+    .log-box {
+      font-size: 11px;
+      font-weight: bold;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* Botones de Control */
+    .controls {
+      margin-top: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-start {
+      background: #333;
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px #000;
+    }
+    .btn-start:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px #000;
+    }
+  </style>
+</head>
+<body>
+
+<div class="console">
+  <div class="lcd-screen">
+    <div class="hud">
+      <div>ALEX <div class="hp-bar"><div id="hp-alex" class="hp-fill"></div></div></div>
+      <div>NICOL <div class="hp-bar"><div id="hp-nicol" class="hp-fill"></div></div></div>
+    </div>
+
+    <div class="stage" id="stage"></div>
+
+    <div class="log-box" id="log">¡PRESIONA PELEAR!</div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-start" onclick="iniciarPelea()">PELEAR</button>
+  </div>
+</div>
+
+<script>
+  const stage = document.getElementById('stage');
+  const log = document.getElementById('log');
+  const pixels = [];
+
+  // Crear la matriz de 16x10 píxeles
+  for (let i = 0; i < 160; i++) {
+    const p = document.createElement('div');
+    p.classList.add('pixel');
+    stage.appendChild(p);
+    pixels.push(p);
+  }
+
+  function clearStage() {
+    pixels.forEach(p => p.classList.remove('on'));
+  }
+
+  function drawPixel(x, y) {
+    if (x >= 0 && x < 16 && y >= 0 && y < 10) {
+      pixels[y * 16 + x].classList.add('on');
+    }
+  }
+
+  // Sprites en formato de coordenadas relativas [x, y]
+  const SPRITES = {
+    ALEX: {
+      IDLE: [[2,5], [2,6], [1,6], [3,6], [2,7], [1,8], [3,8]],
+      PUNCH: [[2,5], [2,6], [1,6], [3,6], [4,6], [5,6], [2,7], [1,8], [3,8]],
+      HIT: [[1,5], [1,6], [0,6], [2,6], [1,7], [0,8], [2,8]]
+    },
+    NICOL: {
+      IDLE: [[13,5], [13,6], [12,6], [14,6], [13,7], [12,8], [14,8]],
+      PUNCH: [[13,5], [13,6], [12,6], [11,6], [10,6], [14,6], [13,7], [12,8], [14,8]],
+      HIT: [[14,5], [14,6], [13,6], [15,6], [14,7], [13,8], [15,8]]
+    }
+  };
+
+  let hpAlex = 100;
+  let hpNicol = 100;
+  let peleando = false;
+
+  function render(spriteA, spriteN) {
+    clearStage();
+    // Dibujar suelo
+    for (let x = 0; x < 16; x++) drawPixel(x, 9);
+    
+    // Dibujar personajes
+    spriteA.forEach(([x, y]) => drawPixel(x, y));
+    spriteN.forEach(([x, y]) => drawPixel(x, y));
+  }
+
+  render(SPRITES.ALEX.IDLE, SPRITES.NICOL.IDLE);
+
+  async function iniciarPelea() {
+    if (peleando) return;
+    peleando = true;
+    hpAlex = 100;
+    hpNicol = 100;
+    document.getElementById('hp-alex').style.width = '100%';
+    document.getElementById('hp-nicol').style.width = '100%';
+
+    while (hpAlex > 0 && hpNicol > 0) {
+      const turn = Math.random() < 0.5 ? 'ALEX' : 'NICOL';
+      const dano = Math.floor(Math.random() * 15) + 10;
+
+      if (turn === 'ALEX') {
+        render(SPRITES.ALEX.PUNCH, SPRITES.NICOL.HIT);
+        hpNicol = Math.max(0, hpNicol - dano);
+        document.getElementById('hp-nicol').style.width = hpNicol + '%';
+        log.innerText = `¡ALEX pega! -${dano} HP`;
+      } else {
+        render(SPRITES.ALEX.HIT, SPRITES.NICOL.PUNCH);
+        hpAlex = Math.max(0, hpAlex - dano);
+        document.getElementById('hp-alex').style.width = hpAlex + '%';
+        log.innerText = `¡NICOL pega! -${dano} HP`;
+      }
+
+      await new Promise(r => setTimeout(r, 700));
+      render(SPRITES.ALEX.IDLE, SPRITES.NICOL.IDLE);
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    log.innerText = hpAlex > 0 ? "¡GANADOR: ALEX!" : "¡GANADORA: NICOL!";
+    peleando = false;
+  }
+</script>
+
+</body>
+</html>
